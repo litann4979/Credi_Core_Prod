@@ -2,12 +2,20 @@
 
 namespace App\Models;
 
+use App\Events\LiveDashboardUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CompOff extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saved(function (CompOff $compOff): void {
+            event(new LiveDashboardUpdated((int) $compOff->user_id));
+        });
+    }
 
     protected $fillable = [
         'user_id',

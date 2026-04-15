@@ -2,10 +2,18 @@
 
 namespace App\Models;
 
+use App\Events\LiveDashboardUpdated;
 use Illuminate\Database\Eloquent\Model;
 
 class Target extends Model
 {
+    protected static function booted(): void
+    {
+        static::saved(function (Target $target): void {
+            event(new LiveDashboardUpdated((int) $target->user_id));
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'type',

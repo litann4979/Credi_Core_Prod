@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\AdminController;
 
+use App\Helpers\NotificationHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Target;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class TargetController extends Controller
 {
@@ -24,19 +24,20 @@ class TargetController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.target.index', compact('targets', 'type'));
+        return view('admin.Target.index', compact('targets', 'type'));
     }
 
     public function create()
     {
-        return view('admin.target.create', $this->usersForForm());
+        return view('admin.Target.create', $this->usersForForm());
     }
 
     public function store(Request $request)
     {
         $data = $this->validatedPayload($request);
 
-        Target::create($data);
+        $target = Target::create($data);
+        $this->notifyTargetAssigned($target, false);
 
         return redirect()
             ->route('admin.targets.index')
@@ -47,7 +48,7 @@ class TargetController extends Controller
     {
         $target->load('user');
 
-        return view('admin.target.edit', array_merge(
+        return view('admin.Target.edit', array_merge(
             $this->usersForForm(),
             ['target' => $target]
         ));
@@ -58,6 +59,8 @@ class TargetController extends Controller
         $data = $this->validatedPayload($request);
 
         $target->update($data);
+        $target->refresh();
+        $this->notifyTargetAssigned($target, true);
 
         return redirect()
             ->route('admin.targets.index')
@@ -83,10 +86,6 @@ class TargetController extends Controller
                 ->where('designation', 'employee')
                 ->orderBy('name')
                 ->get(['id', 'name', 'email']),
-            'team_leads' => User::query()
-                ->where('designation', 'team_lead')
-                ->orderBy('name')
-                ->get(['id', 'name', 'email']),
         ];
     }
 
@@ -97,15 +96,9 @@ class TargetController extends Controller
     {
         $request->validate([
             'user_id_employee' => [
-                'nullable',
+                'required',
                 Rule::exists('users', 'id')->where(function ($query) {
                     $query->where('designation', 'employee')->whereNull('deleted_at');
-                }),
-            ],
-            'user_id_team_lead' => [
-                'nullable',
-                Rule::exists('users', 'id')->where(function ($query) {
-                    $query->where('designation', 'team_lead')->whereNull('deleted_at');
                 }),
             ],
             'type' => ['required', Rule::in(['lead', 'attendance', 'leave'])],
@@ -116,24 +109,7 @@ class TargetController extends Controller
             'is_completed' => ['sometimes', 'boolean'],
         ]);
 
-        $hasEmployee = filled($request->input('user_id_employee'));
-        $hasTeamLead = filled($request->input('user_id_team_lead'));
-
-        if (! $hasEmployee && ! $hasTeamLead) {
-            throw ValidationException::withMessages([
-                'user_id_employee' => 'Please select either an employee or a team lead.',
-            ]);
-        }
-
-        if ($hasEmployee && $hasTeamLead) {
-            throw ValidationException::withMessages([
-                'user_id_employee' => 'Select only one assignee: either an employee or a team lead.',
-            ]);
-        }
-
-        $userId = $hasEmployee
-            ? (int) $request->input('user_id_employee')
-            : (int) $request->input('user_id_team_lead');
+        $userId = (int) $request->input('user_id_employee');
 
         return [
             'user_id' => $userId,
@@ -144,5 +120,24 @@ class TargetController extends Controller
             'end_date' => $request->input('end_date'),
             'is_completed' => $request->boolean('is_completed'),
         ];
+    }
+
+    private function notifyTargetAssigned(Target $target, bool $isUpdate): void
+    {
+        $title = $isUpdate ? 'Target updated' : 'New target assigned';
+        $message = sprintf(
+            '%s target: %d | From %s to %s',
+            ucfirst($target->type),
+            (int) $target->target_value,
+            $target->start_date?->format('d M Y') ?? '-',
+            $target->end_date?->format('d M Y') ?? '-'
+        );
+
+        NotificationHelper::sendTargetNotification(
+            (int) $target->user_id,
+            (int) $target->id,
+            $title,
+            $message
+        );
     }
 }

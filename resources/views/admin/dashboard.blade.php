@@ -289,9 +289,78 @@
         }
 
         /* Mobile */
-        @media (max-width: 768px) {
-            .main-content { margin-left: 0; padding: 20px; }
-            .stats-overview-grid { grid-template-columns: 1fr; }
+        @media (max-width: 992px) {
+            .main-content {
+                margin-left: 0;
+                padding-top: 76px;
+            }
+
+            .page-wrapper {
+                padding: 1rem;
+            }
+
+            .greeting-section {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+                padding: 14px 16px;
+            }
+
+            .greeting-icon {
+                align-self: flex-end;
+            }
+
+            .card-header {
+                padding: 12px 14px;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .section-title {
+                font-size: 0.9rem;
+                line-height: 1.3;
+            }
+
+            .stats-overview-grid {
+                grid-template-columns: 1fr;
+                padding: 14px;
+            }
+
+            .stat-item {
+                padding: 14px;
+            }
+
+            .table-modern {
+                min-width: 760px;
+            }
+
+            .table-modern thead th,
+            .table-modern tbody td {
+                padding: 10px 12px;
+                font-size: 0.78rem;
+            }
+
+            .overflow-x-auto {
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding-top: 72px;
+            }
+
+            .page-wrapper {
+                padding: 0.75rem;
+            }
+
+            .greeting-text h1 {
+                font-size: 1.05rem;
+            }
+
+            .greeting-text p {
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -760,6 +829,7 @@
         <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-orange-500"></div>
     </div>
 
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script>
         // 1. Export CSV Logic
         document.getElementById('updateExportCsvBtn')?.addEventListener('click', function() {
@@ -1102,6 +1172,27 @@
                 sessionStorage.removeItem('scrollPosition');
             }
         });
+
+        // Realtime refresh (Pusher) - keeps backend-driven values intact.
+        (function initDashboardRealtime() {
+            const pusherKey = @json(config('broadcasting.connections.pusher.key'));
+            const pusherCluster = @json(config('broadcasting.connections.pusher.options.cluster'));
+            if (!pusherKey || !window.Pusher) return;
+
+            let reloadTimer = null;
+            const softReload = () => {
+                if (document.hidden) return;
+                if (reloadTimer) clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(() => window.location.reload(), 1200);
+            };
+
+            const pusher = new Pusher(pusherKey, {
+                cluster: pusherCluster || 'mt1',
+                forceTLS: true,
+            });
+            const channel = pusher.subscribe('admin-live-dashboard');
+            channel.bind('dashboard.updated', softReload);
+        })();
     </script>
 </body>
 </html>

@@ -2,15 +2,14 @@
     $t = $target ?? null;
     $user = $t?->user;
     $selEmployee = old('user_id_employee', ($user && $user->designation === 'employee') ? $t->user_id : '');
-    $selTeamLead = old('user_id_team_lead', ($user && $user->designation === 'team_lead') ? $t->user_id : '');
 @endphp
 
 <div class="row g-4 mb-4">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="section-label"><i class="fas fa-user me-1"></i> Employee</div>
         <div class="assignee-box">
             <label for="user_id_employee" class="form-label text-muted fw-bold small text-uppercase">Assign to employee</label>
-            <select name="user_id_employee" id="user_id_employee" class="form-select">
+            <select name="user_id_employee" id="user_id_employee" class="form-select" required>
                 <option value="">— Select employee —</option>
                 @foreach($employees as $u)
                     <option value="{{ $u->id }}" @selected((string) $selEmployee === (string) $u->id)>
@@ -23,25 +22,7 @@
             @enderror
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="section-label"><i class="fas fa-user-tie me-1"></i> Team lead</div>
-        <div class="assignee-box">
-            <label for="user_id_team_lead" class="form-label text-muted fw-bold small text-uppercase">Assign to team lead</label>
-            <select name="user_id_team_lead" id="user_id_team_lead" class="form-select">
-                <option value="">— Select team lead —</option>
-                @foreach($team_leads as $u)
-                    <option value="{{ $u->id }}" @selected((string) $selTeamLead === (string) $u->id)>
-                        {{ $u->name }} @if($u->email)<span class="text-muted">({{ $u->email }})</span>@endif
-                    </option>
-                @endforeach
-            </select>
-            @error('user_id_team_lead')
-                <div class="text-danger small mt-1">{{ $message }}</div>
-            @enderror
-        </div>
-    </div>
 </div>
-<p class="text-muted small mb-4"><i class="fas fa-info-circle me-1"></i> Choose exactly one: either an employee or a team lead.</p>
 
 <div class="row g-3">
     <div class="col-md-4">
@@ -100,16 +81,3 @@
     </div>
 </div>
 
-<script>
-    (function () {
-        var emp = document.getElementById('user_id_employee');
-        var tl = document.getElementById('user_id_team_lead');
-        if (!emp || !tl) return;
-        emp.addEventListener('change', function () {
-            if (this.value) tl.value = '';
-        });
-        tl.addEventListener('change', function () {
-            if (this.value) emp.value = '';
-        });
-    })();
-</script>

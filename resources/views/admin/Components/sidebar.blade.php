@@ -25,12 +25,12 @@
                         <span>Live Dashboard</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="{{ route('admin.live-dashboard.userindex') }}" class="nav-link {{ request()->routeIs('admin.live-dashboard.userindex') ? 'active' : '' }}">
+                {{-- <li class="nav-item">
+                    <a href="{{ route('admin.live-dashboard.teamlead-index') }}" class="nav-link {{ request()->routeIs('admin.live-dashboard.teamlead-index') ? 'active' : '' }}">
                         <i class="fas fa-broadcast-tower"></i>
-                        <span>User Dashboard</span>
+                        <span>Teamlead Live Dashboard</span>
                     </a>
-                </li>
+                </li> --}}
 
                 <li class="nav-item">
                     <a href="#" class="nav-link has-submenu {{ request()->routeIs('admin.operations.*') || request()->routeIs('admin.teamlead.*') || request()->routeIs('admin.employees.*') || request()->routeIs('admin.hr.*') ? 'active' : '' }}" data-submenu="operations">
@@ -210,24 +210,26 @@
     }
 
     .logo {
-        width: 68px;
-        height: 44px;
-        border-radius: 8px;
+        width: auto;
+        height: 34px;
+        border-radius: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        background: #fff;
-        border: 1px solid #fed7aa;
+        background: transparent;
+        border: none;
         flex-shrink: 0;
     }
 
     .logo-image {
-        width: 100%;
+        width: auto;
         height: 100%;
+        max-width: 96px;
         object-fit: contain;
         object-position: center;
-        border-radius: 8px;
+        border-radius: 0;
+        display: block;
     }
 
     .logo-text h3 {

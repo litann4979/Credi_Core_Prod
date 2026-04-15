@@ -7,7 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    @include('admin.target.partials.styles')
+    @include('admin.Target.partials.styles')
 </head>
 <body>
 
@@ -76,13 +76,13 @@
                                 <td>#{{ $target->id }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
                                             <i class="fas fa-user text-primary"></i>
                                         </div>
                                         <div>
                                             <span class="fw-medium d-block">{{ $target->user?->name ?? '—' }}</span>
                                             @if($target->user?->designation)
-                                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">{{ str_replace('_', ' ', $target->user->designation) }}</span>
+                                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.62rem; padding: 0.18rem 0.35rem;">{{ str_replace('_', ' ', $target->user->designation) }}</span>
                                             @endif
                                         </div>
                                     </div>
@@ -103,17 +103,19 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="text-end">
-                                    <a href="{{ route('admin.targets.edit', $target) }}" class="action-btn me-1" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.targets.destroy', $target) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this target?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="action-btn delete" title="Delete">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
+                                <td class="text-end" style="white-space: nowrap; min-width: 96px;">
+                                    <div class="d-inline-flex align-items-center gap-1 flex-nowrap">
+                                        <a href="{{ route('admin.targets.edit', $target) }}" class="action-btn" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="{{ route('admin.targets.destroy', $target) }}" method="POST" class="d-inline-flex m-0" onsubmit="return confirm('Delete this target?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="action-btn delete" title="Delete">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

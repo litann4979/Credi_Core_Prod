@@ -90,19 +90,20 @@
         background-color: #f9fafb;
         color: #6b7280;
         font-weight: 600;
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        padding: 1rem 2rem;
+        padding: 0.7rem 1.2rem;
         border-bottom: 1px solid #e5e7eb;
     }
 
     .table-modern td {
-        padding: 1rem 2rem;
+        padding: 0.55rem 1.2rem;
         vertical-align: middle;
         border-bottom: 1px solid #f3f4f6;
         color: #374151;
-        font-size: 0.875rem;
+        font-size: 0.82rem;
+        line-height: 1.15;
     }
 
     .table-modern tr:hover td {
@@ -110,8 +111,8 @@
     }
 
     .action-btn {
-        width: 32px;
-        height: 32px;
+        width: 30px;
+        height: 30px;
         border-radius: 6px;
         display: inline-flex;
         align-items: center;

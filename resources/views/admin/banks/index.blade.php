@@ -96,16 +96,38 @@
             font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            padding: 1rem 2rem;
+            padding: 0.7rem 1.2rem;
             border-bottom: 1px solid #e5e7eb;
         }
 
         .table-modern td {
-            padding: 1rem 2rem;
+            padding: 0.55rem 1.2rem;
             vertical-align: middle;
             border-bottom: 1px solid #f3f4f6;
             color: #374151;
-            font-size: 0.875rem;
+            font-size: 0.82rem;
+            line-height: 1.15;
+        }
+
+        .bank-icon-wrap {
+            width: 28px;
+            height: 28px;
+        }
+
+        .bank-name-text {
+            font-size: 0.82rem;
+            line-height: 1.1;
+        }
+
+        .status-chip {
+            font-size: 0.68rem;
+            padding: 0.18rem 0.42rem;
+            line-height: 1;
+        }
+
+        .table-modern .action-col {
+            white-space: nowrap;
+            min-width: 110px;
         }
 
         .table-modern tr:hover td {
@@ -113,8 +135,8 @@
         }
 
         .action-btn {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             border-radius: 6px;
             display: inline-flex;
             align-items: center;
@@ -123,6 +145,19 @@
             transition: all 0.2s;
             background: transparent;
             border: 1px solid transparent;
+        }
+
+        .action-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: nowrap;
+            justify-content: flex-end;
+        }
+
+        .action-group form {
+            margin: 0;
+            display: inline-flex;
         }
 
         .action-btn:hover {
@@ -141,7 +176,7 @@
             border: none;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        
+
         .modal-header {
             border-bottom: 1px solid #f3f4f6;
             padding: 1.5rem;
@@ -173,13 +208,13 @@
     @include('admin.Components.sidebar')
 
     <div class="main-container">
-        
+
         <div class="container-fluid pb-0">
              @include('admin.Components.header')
         </div>
 
         <div class="container-fluid">
-            
+
             @if(session('success'))
                 <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4" role="alert" style="border-radius: 12px;">
                     <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
@@ -198,7 +233,7 @@
                 </div>
             @endif
 
-       
+
             <div class="card-modern">
                 <div class="card-header-modern">
                     <h4>Bank Master List</h4>
@@ -245,31 +280,32 @@
                                     <td>#{{ $bank->id }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 bank-icon-wrap">
                                                 <i class="fas fa-university text-primary"></i>
                                             </div>
-                                            <span class="fw-medium">{{ $bank->bank_name }}</span>
+                                            <span class="fw-medium bank-name-text">{{ $bank->bank_name }}</span>
                                         </div>
                                     </td>
                                     <td>
     @if($bank->is_active)
-        <span class="badge bg-success-subtle text-success fw-medium">
+        <span class="badge bg-success-subtle text-success fw-medium status-chip">
             <i class="fas fa-check-circle me-1"></i> Active
         </span>
     @else
-        <span class="badge bg-danger-subtle text-danger fw-medium">
+        <span class="badge bg-danger-subtle text-danger fw-medium status-chip">
             <i class="fas fa-ban me-1"></i> Inactive
         </span>
     @endif
 </td>
 
-                                    <td class="text-end">
-                                        <button class="action-btn me-1" 
+                                    <td class="text-end action-col">
+                                        <div class="action-group">
+                                        <button class="action-btn"
                                                 onclick="editBank({{ $bank->id }}, '{{ addslashes($bank->bank_name) }}')"
                                                 title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        
+
                                       <form action="{{ route('admin.banks.toggle', $bank->id) }}" method="POST" class="d-inline">
     @csrf
     @method('PATCH')
@@ -280,6 +316,7 @@
         <i class="fas {{ $bank->is_active ? 'fa-ban' : 'fa-check' }}"></i>
     </button>
 </form>
+                                        </div>
 
                                     </td>
                                 </tr>
@@ -296,10 +333,10 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 @if($banks->hasPages())
                     <div class="p-4 border-top">
-                        {{ $banks->links() }}
+                        {{ $banks->links('pagination::bootstrap-5') }}
                     </div>
                 @endif
             </div>
@@ -363,10 +400,10 @@
             // Set the form action dynamically
             let form = document.getElementById('editBankForm');
             form.action = `/admin/banks/${id}`;
-            
+
             // Set the input value
             document.getElementById('edit_bank_name').value = name;
-            
+
             // Show the modal
             let myModal = new bootstrap.Modal(document.getElementById('editBankModal'));
             myModal.show();

@@ -241,10 +241,109 @@
 
         /* Responsive */
         @media (max-width: 992px) {
-            .main-content { margin-left: 0; padding: 20px; }
+            .main-content {
+                margin-left: 0;
+                padding-top: 76px;
+            }
+            .page-wrapper {
+                padding: 1rem;
+            }
+            .card-box {
+                border-radius: 12px;
+            }
+            .section-title {
+                font-size: 1rem;
+                line-height: 1.3;
+            }
             .lead-detail-grid { grid-template-columns: 1fr; }
             .modal-footer { justify-content: center; }
             .modal-footer button { width: 100%; margin-bottom: 5px; }
+            .table-modern { min-width: 1040px; }
+            .table-modern thead th,
+            .table-modern tbody td {
+                padding: 10px 12px;
+                font-size: 0.78rem;
+                white-space: nowrap;
+            }
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+            }
+            .card-box .d-flex.gap-3 {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+
+            /* Lead detail modal mobile polish */
+            #leadDetailModal .modal-container {
+                width: 95vw;
+                max-width: 95vw;
+                max-height: 90vh;
+                border-radius: 14px;
+            }
+            #leadDetailModal .modal-header {
+                padding: 14px 16px;
+            }
+            #leadDetailModal .modal-title {
+                font-size: 1.1rem;
+            }
+            #leadDetailModal .modal-content {
+                padding: 14px;
+                overflow-y: auto;
+            }
+            #leadDetailModal .lead-detail-grid {
+                gap: 14px;
+            }
+            #leadDetailModal .lead-avatar-large {
+                width: 78px;
+                height: 78px;
+                font-size: 1.8rem;
+            }
+            #leadDetailModal .detail-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            #leadDetailModal .modal-footer {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                padding: 12px 14px;
+            }
+            #leadDetailModal .modal-footer button {
+                width: 100%;
+                margin-bottom: 0;
+                padding: 8px 10px;
+                font-size: 0.9rem;
+                line-height: 1.2;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding-top: 72px;
+            }
+            .page-wrapper {
+                padding: 0.75rem;
+            }
+            .btn-primary-custom,
+            .btn-secondary-custom {
+                width: 100%;
+                justify-content: center;
+            }
+
+            #leadDetailModal .modal-header {
+                padding: 12px 14px;
+            }
+            #leadDetailModal .modal-title {
+                font-size: 1rem;
+            }
+            #leadDetailModal .modal-content {
+                padding: 12px;
+            }
+            #leadDetailModal .modal-footer {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>

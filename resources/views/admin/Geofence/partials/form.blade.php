@@ -42,6 +42,7 @@
         <p class="text-muted small mb-2">
             <i class="fas fa-info-circle me-1"></i>
             Click anywhere on map to set location. Drag marker or change radius to update the geofence circle.
+            GPS can be a few metres off; if the pin is not on your building, drag it to the exact spot.
         </p>
     </div>
     <div class="col-12">
@@ -49,6 +50,9 @@
         <div class="input-group">
             <input type="text" class="form-control" id="mapSearchInput"
                    placeholder="Search office, area, city, landmark...">
+            <button type="button" class="btn btn-outline-secondary" id="useCurrentLocationBtn">
+                <i class="fas fa-location-crosshairs"></i> Use current location
+            </button>
             <button type="button" class="btn btn-modern" id="mapSearchBtn">
                 <i class="fas fa-search"></i> Search
             </button>
@@ -75,6 +79,7 @@
             const mapSearchInput = document.getElementById('mapSearchInput');
             const mapSearchBtn = document.getElementById('mapSearchBtn');
             const mapSearchMessage = document.getElementById('mapSearchMessage');
+            const useCurrentLocationBtn = document.getElementById('useCurrentLocationBtn');
             const mapFullscreenBtn = document.getElementById('mapFullscreenBtn');
 
             if (!mapElement || !latInput || !lngInput || !radiusInput || typeof window.L === 'undefined') {
@@ -100,13 +105,34 @@
                 }
             );
 
+            const placeLabelsForHybrid = L.tileLayer(
+                'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19,
+                    attribution: 'Labels &copy; Esri'
+                }
+            );
+
+            const placeLabelsOverlay = L.tileLayer(
+                'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+                {
+                    maxZoom: 19,
+                    attribution: 'Labels &copy; Esri'
+                }
+            );
+
+            const hybridLayer = L.layerGroup([satelliteLayer, placeLabelsForHybrid]);
+
             streetLayer.addTo(map);
             L.control.layers(
                 {
                     'Street': streetLayer,
-                    'Satellite': satelliteLayer
+                    'Satellite': satelliteLayer,
+                    'Hybrid': hybridLayer
                 },
-                null,
+                {
+                    'Place Labels': placeLabelsOverlay
+                },
                 { collapsed: false }
             ).addTo(map);
 
@@ -118,7 +144,35 @@
                 fillOpacity: 0.15
             }).addTo(map);
 
+            /** GPS uncertainty ring (metres); cleared when user moves pin manually */
+            let locationAccuracyCircle = null;
+
+            function clearLocationAccuracyCircle() {
+                if (locationAccuracyCircle && map.hasLayer(locationAccuracyCircle)) {
+                    map.removeLayer(locationAccuracyCircle);
+                }
+                locationAccuracyCircle = null;
+            }
+
+            function setLocationAccuracyCircle(lat, lng, accuracyMeters) {
+                clearLocationAccuracyCircle();
+                let r = Number(accuracyMeters);
+                if (isNaN(r) || r <= 0) {
+                    r = 45;
+                }
+                r = Math.min(Math.max(r, 5), 2000);
+                locationAccuracyCircle = L.circle([lat, lng], {
+                    radius: r,
+                    color: '#2563eb',
+                    weight: 2,
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.14,
+                    interactive: false
+                }).addTo(map);
+            }
+
             function updateInputs(latlng) {
+                clearLocationAccuracyCircle();
                 latInput.value = latlng.lat.toFixed(6);
                 lngInput.value = latlng.lng.toFixed(6);
             }
@@ -174,6 +228,7 @@
 
                     latInput.value = lat.toFixed(6);
                     lngInput.value = lng.toFixed(6);
+                    clearLocationAccuracyCircle();
                     updateMap(lat, lng, radius);
                     map.setView([lat, lng], 16);
 
@@ -182,6 +237,151 @@
                     setSearchMessage('Search failed. Please try again.', 'danger');
                 } finally {
                     if (mapSearchBtn) mapSearchBtn.disabled = false;
+                }
+            }
+
+            function useCurrentLocation() {
+                if (!navigator.geolocation) {
+                    setSearchMessage('Geolocation is not supported in this browser.', 'warning');
+                    return;
+                }
+
+                if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    setSearchMessage('Use HTTPS in production for accurate GPS; HTTP often falls back to coarse location.', 'warning');
+                }
+
+                if (useCurrentLocationBtn) {
+                    useCurrentLocationBtn.disabled = true;
+                }
+
+                const radius = Math.max(1, parseFloat(radiusInput.value) || 1);
+                const geoOptions = { enableHighAccuracy: true, maximumAge: 0, timeout: 25000 };
+
+                let watchId = null;
+                let settled = false;
+                let best = null;
+                const maxMs = 20000;
+                const goodEnoughM = 35;
+
+                function cleanupWatch() {
+                    if (watchId !== null) {
+                        navigator.geolocation.clearWatch(watchId);
+                        watchId = null;
+                    }
+                }
+
+                function applyBestReading() {
+                    if (!best) return;
+                    latInput.value = Number(best.lat).toFixed(6);
+                    lngInput.value = Number(best.lng).toFixed(6);
+                    updateMap(best.lat, best.lng, radius);
+                    setLocationAccuracyCircle(best.lat, best.lng, best.accuracy);
+                }
+
+                function finish(lat, lng, accuracyM) {
+                    if (settled) return;
+                    settled = true;
+                    cleanupWatch();
+                    latInput.value = Number(lat).toFixed(6);
+                    lngInput.value = Number(lng).toFixed(6);
+                    updateMap(lat, lng, radius);
+                    setLocationAccuracyCircle(lat, lng, accuracyM);
+                    map.setView([lat, lng], 18);
+
+                    const accText = typeof accuracyM === 'number' && !isNaN(accuracyM)
+                        ? ' ±' + Math.round(accuracyM) + ' m.'
+                        : '';
+                    setSearchMessage(
+                        'Location updated.' + accText + ' If the pin is not on your building, drag it to the correct spot.',
+                        'success'
+                    );
+                    if (useCurrentLocationBtn) {
+                        useCurrentLocationBtn.disabled = false;
+                    }
+                }
+
+                function onGeoError() {
+                    cleanupWatch();
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            const acc = typeof position.coords.accuracy === 'number' ? position.coords.accuracy : 80;
+                            finish(position.coords.latitude, position.coords.longitude, acc);
+                        },
+                        function () {
+                            setSearchMessage('Unable to get location. Allow permission, use HTTPS, or place the marker manually.', 'danger');
+                            if (useCurrentLocationBtn) useCurrentLocationBtn.disabled = false;
+                        },
+                        geoOptions
+                    );
+                }
+
+                function handleReading(position) {
+                    if (settled) return;
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const acc = typeof position.coords.accuracy === 'number' ? position.coords.accuracy : 999;
+
+                    if (!best || acc < best.accuracy) {
+                        best = { lat: lat, lng: lng, accuracy: acc };
+                    }
+
+                    applyBestReading();
+                    map.panTo([best.lat, best.lng]);
+
+                    setSearchMessage(
+                        'Locking GPS… best ±' + Math.round(best.accuracy) + ' m. Hold still a few seconds.',
+                        null
+                    );
+
+                    if (acc <= goodEnoughM) {
+                        finish(best.lat, best.lng, best.accuracy);
+                    }
+                }
+
+                setSearchMessage('Getting high-accuracy GPS… hold still for a few seconds.', null);
+
+                if (navigator.geolocation.watchPosition) {
+                    watchId = navigator.geolocation.watchPosition(
+                        handleReading,
+                        onGeoError,
+                        geoOptions
+                    );
+
+                    setTimeout(function () {
+                        if (settled) return;
+                        cleanupWatch();
+                        if (best) {
+                            finish(best.lat, best.lng, best.accuracy);
+                        } else {
+                            navigator.geolocation.getCurrentPosition(
+                                function (position) {
+                                    handleReading(position);
+                                    if (!settled && best) {
+                                        finish(best.lat, best.lng, best.accuracy);
+                                    }
+                                },
+                                function () {
+                                    setSearchMessage('No GPS fix yet. Try near a window/outdoors, then retry — or drag the marker.', 'danger');
+                                    if (useCurrentLocationBtn) useCurrentLocationBtn.disabled = false;
+                                },
+                                geoOptions
+                            );
+                        }
+                    }, maxMs);
+                } else {
+                    navigator.geolocation.getCurrentPosition(
+                        function (position) {
+                            handleReading(position);
+                            if (!settled && best) {
+                                finish(best.lat, best.lng, best.accuracy);
+                            }
+                        },
+                        function () {
+                            setSearchMessage('Unable to fetch current location. Please allow location permission.', 'danger');
+                            if (useCurrentLocationBtn) useCurrentLocationBtn.disabled = false;
+                        },
+                        geoOptions
+                    );
                 }
             }
 
@@ -233,6 +433,10 @@
                         searchPlace();
                     }
                 });
+            }
+
+            if (useCurrentLocationBtn) {
+                useCurrentLocationBtn.addEventListener('click', useCurrentLocation);
             }
 
             function updateFullscreenButton(isFullscreen) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Leads Details</title>
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -122,7 +122,7 @@
         .btn-reject { background: #ef4444; color: white; }
         .btn-disburse { background: #059669; color: white; }
         .btn-future { background: #f59e0b; color: white; }
-        
+
         .modal-footer button {
             border: none;
             padding: 10px 20px;
@@ -275,7 +275,7 @@
             grid-template-columns: 300px 1fr;
             gap: 24px;
         }
-        
+
         /* Left Column Profile */
         .lead-avatar-large {
             width: 100px;
@@ -290,7 +290,7 @@
             justify-content: center;
             margin-bottom: 16px;
         }
-        
+
         .contact-item {
             display: flex;
             align-items: center;
@@ -406,7 +406,55 @@
             .lead-detail-grid { grid-template-columns: 1fr; }
             .modal-footer { flex-direction: column; }
             .modal-footer button { width: 100%; }
-            .main-content { margin-left: 0; padding: 20px; }
+            .main-content {
+                margin-left: 0;
+                padding-top: 76px;
+            }
+            .page-wrapper {
+                padding: 1rem;
+            }
+            .card-header {
+                padding: 12px 14px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+            .section-title {
+                font-size: 0.95rem;
+                line-height: 1.3;
+            }
+            .table-modern { min-width: 1120px; }
+            .table-modern thead th,
+            .table-modern tbody td {
+                padding: 10px 12px;
+                font-size: 0.78rem;
+                white-space: nowrap;
+            }
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+            }
+            .card-box .d-flex.gap-2,
+            .card-box .d-flex.gap-3 {
+                width: 100%;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding-top: 72px;
+            }
+            .page-wrapper {
+                padding: 0.75rem;
+            }
+            .section-title {
+                font-size: 0.85rem;
+            }
+            .btn-primary-custom,
+            .btn-secondary-custom {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -418,17 +466,17 @@
         @include('admin.Components.header')
 
         <div class="page-wrapper">
-            
+
             <div class="card-box p-4 mb-4">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
                     <div>
                         <h1 class="section-title mb-1">
-                            <i class="fas fa-users text-warning me-2"></i> 
+                            <i class="fas fa-users text-warning me-2"></i>
                             {{ ucfirst(str_replace('_', ' ', $status)) }} Leads
                         </h1>
                         <p class="text-muted small mb-0">Manage and track your lead status details</p>
                     </div>
-                    
+
                     <div class="d-flex gap-2">
                         <div class="bg-orange-50 text-orange-700 px-3 py-2 rounded-3 border border-orange-100 shadow-sm text-sm fw-bold">
                             Total: <span id="totalLeadsCount">{{ count($leads) }}</span>
@@ -635,7 +683,7 @@
                         <div class="vstack gap-2">
                             <div class="contact-item"><i class="fas fa-phone"></i> <input id="modalLeadPhone" class="editable-field" disabled></div>
                             <div class="contact-item"><i class="fas fa-envelope"></i> <input id="modalLeadEmail" class="editable-field" disabled></div>
-                            
+
                             <div class="contact-item">
                                 <i class="fas fa-university"></i>
                                 <div class="w-100">
@@ -708,7 +756,7 @@
                                 <label>Company</label>
                                 <input type="text" id="modalLeadCompany" class="editable-field" disabled>
                             </div>
-                            
+
                             <div class="detail-item">
                                 <label>State</label>
                                 <input type="text" id="modalLeadState" class="editable-field" disabled>
@@ -752,7 +800,7 @@
                         </div>
 
                          <input type="hidden" id="modalName">
-                         
+
                         <div class="mt-4">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="fw-bold">Documents</label>
@@ -762,7 +810,7 @@
                             </div>
                             <div id="documentList" class="bg-light p-3 rounded border"></div>
                         </div>
-                        
+
                         <div id="rejectionReasonSection" style="display:none;" class="mt-3 p-3 bg-danger-subtle text-danger rounded border border-danger">
                             <strong>Reason for Rejection:</strong> <p class="mb-0" id="modalLeadReason"></p>
                         </div>
@@ -773,7 +821,7 @@
                 <button class="btn-primary-custom" id="editLeadButton" onclick="enableLeadEdit()"><i class="fas fa-edit"></i> Edit</button>
                 <button class="btn-success" id="saveLeadButton" style="display:none;" onclick="saveLeadChanges()"><i class="fas fa-save"></i> Save</button>
                 <button class="btn-reject" id="deleteButton" onclick="showDeleteModal(currentLeadId)"><i class="fas fa-trash"></i> Delete</button>
-                
+
                 @if(auth()->user()->hasDesignation('admin'))
                     <button class="btn-secondary-custom" id="loginButton" onclick="showLoginModal(currentLeadId)"><i class="fas fa-sign-in-alt"></i> Login</button>
                     <button class="btn-authorize" id="authorizeButton" onclick="showAuthorizeModal(currentLeadId)"><i class="fas fa-check-double"></i> Authorize</button>
@@ -967,6 +1015,7 @@
         <div class="spinner"></div>
     </div>
 
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
     <script>
         // Forward to operations
         function forwardToOperations(leadId) {
@@ -1178,11 +1227,11 @@
                 document.getElementById('modalLeadCity').value = lead.city ?? '';
                 document.getElementById('modalLeadAmount').value = lead.lead_amount ? `${lead.lead_amount}` : '';
                 document.getElementById('modalLeadAmountInWords').textContent = lead.lead_amount ? numberToWords(parseInt(lead.lead_amount)) : 'N/A';
-                
+
                 const statusEl = document.getElementById('modalLeadStatus');
                 statusEl.textContent = lead.status ? lead.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'N/A';
                 statusEl.className = `status-badge ${lead.status}`;
-                
+
                 setExpectedMonthUI(lead.expected_month);
                 const leadTypeDisplay = lead.lead_type ? lead.lead_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'N/A';
                 document.getElementById('modalLeadTypeDisplay').textContent = leadTypeDisplay;
@@ -1202,7 +1251,7 @@
 
                 const employeeNameEl = document.getElementById('modalLeadEmployeeName');
                 if (employeeNameEl) employeeNameEl.textContent = lead.employee_name ?? 'N/A';
-                
+
                 const teamLeadNameEl = document.getElementById('modalLeadTeamLeadName');
                 if (teamLeadNameEl) teamLeadNameEl.textContent = lead.team_lead_name ?? 'N/A';
 
@@ -1320,7 +1369,7 @@
 
             document.getElementById('editLeadButton').style.display = 'none';
             document.getElementById('saveLeadButton').style.display = 'inline-flex';
-            
+
             document.getElementById('modalLeadTypeDisplay').style.display = 'none';
             document.getElementById('modalLeadType').style.display = 'block';
 
@@ -1348,7 +1397,7 @@
             const currentBank = document.getElementById('modalLeadBank').value;
             const bankDropdown = document.getElementById('modalLeadBankDropdown');
             const bankCustom = document.getElementById('modalLeadBankCustom');
-            
+
             document.getElementById('modalLeadBank').style.display = 'none';
             bankDropdown.style.display = 'block';
             bankDropdown.disabled = false;
@@ -1381,7 +1430,7 @@
             fields.forEach(field => field.disabled = true);
             document.getElementById('editLeadButton').style.display = 'inline-flex';
             document.getElementById('saveLeadButton').style.display = 'none';
-            
+
             document.getElementById('modalLeadTypeDisplay').style.display = 'inline-block';
             document.getElementById('modalLeadType').style.display = 'none';
 
@@ -1583,7 +1632,7 @@ async function loadCities(districtId) {
         function saveLeadChanges() {
             const bankDropdown = document.getElementById('modalLeadBankDropdown');
             let finalBankName = bankDropdown.value === 'Other' ? document.getElementById('modalLeadBankCustom').value.trim() : bankDropdown.value;
-            
+
             if (bankDropdown.value === 'Other' && finalBankName === '') {
                 showNotification('Please enter a Bank Name', 'error'); return;
             }
@@ -1617,9 +1666,9 @@ async function loadCities(districtId) {
             .then(d => {
                 showNotification(d.message || 'Updated.', 'success');
                 // Update UI text
-                if(document.getElementById('modalLeadStateDropdown').selectedIndex !== -1) 
+                if(document.getElementById('modalLeadStateDropdown').selectedIndex !== -1)
                     document.getElementById('modalLeadState').value = document.getElementById('modalLeadStateDropdown').options[document.getElementById('modalLeadStateDropdown').selectedIndex].text;
-                
+
                 // ... (Update other UI fields similarly) ...
                 document.getElementById('modalLeadBank').value = finalBankName;
                 const emSel = document.getElementById('modalLeadExpectedMonth');
@@ -1655,7 +1704,7 @@ async function loadCities(districtId) {
 
         // ... Reuse showAuthorizeModal, confirmAuthorize, showApproveModal, confirmApprove etc. from original code ...
         // ... Reuse updateLeadStatus logic ...
-        
+
         function updateLeadStatus(leadId, status, reason = null, expectedMonth = null, loanAccountNumber = null) {
             const data = { status, reason, loan_account_number: loanAccountNumber, _token: document.querySelector('meta[name="csrf-token"]').content };
             showLoading(true);
@@ -1679,13 +1728,13 @@ async function loadCities(districtId) {
         // Add missing handlers for Approve/Reject/Disburse/Future logic here using the pattern above.
         function showAuthorizeModal(id) { window.currentLeadId = id; document.getElementById('authorizeModal').classList.add('active'); }
         function confirmAuthorize() { updateLeadStatus(window.currentLeadId, 'authorized'); }
-        
-        function showApproveModal(id) { 
-             window.currentLeadId = id; 
+
+        function showApproveModal(id) {
+             window.currentLeadId = id;
              const acc = document.getElementById('modalLeadAccountNumber').value;
              document.getElementById('approveModalMessage').textContent = acc ? "Update existing account:" : "Enter account:";
              document.getElementById('loanAccountNumber1').value = acc || '';
-             document.getElementById('approveModal').classList.add('active'); 
+             document.getElementById('approveModal').classList.add('active');
         }
         function confirmApprove() {
             const acc = document.getElementById('loanAccountNumber1').value || document.getElementById('modalLeadAccountNumber').value;
@@ -1700,12 +1749,12 @@ async function loadCities(districtId) {
             updateLeadStatus(window.currentLeadId, 'rejected', r);
         }
 
-        function showDisburseModal(id) { 
-            window.currentLeadId = id; 
+        function showDisburseModal(id) {
+            window.currentLeadId = id;
             const acc = document.getElementById('modalLeadAccountNumber').value;
             document.getElementById('disburseModalMessage').textContent = acc ? "Verify account:" : "Enter account:";
             document.getElementById('loanAccountNumber2').value = acc || '';
-            document.getElementById('disburseModal').classList.add('active'); 
+            document.getElementById('disburseModal').classList.add('active');
         }
         function confirmDisburse() {
             const acc = document.getElementById('loanAccountNumber2').value || document.getElementById('modalLeadAccountNumber').value;
@@ -1715,7 +1764,7 @@ async function loadCities(districtId) {
 
         function showFutureLeadModal(id) { window.currentLeadId = id; document.getElementById('futureLeadModal').classList.add('active'); }
         function confirmFutureLead() { updateLeadStatus(window.currentLeadId, 'future_lead'); }
-        
+
         function showDeleteModal(id) { window.currentLeadId = id; document.getElementById('deleteModal').classList.add('active'); }
         function confirmDelete() {
             showLoading(true);
@@ -1752,11 +1801,11 @@ async function loadCities(districtId) {
         // Get all filter values
         const fromDateStr = document.getElementById('fromDate') ? document.getElementById('fromDate').value : '';
         const toDateStr = document.getElementById('toDate') ? document.getElementById('toDate').value : '';
-        
+
         // Create Date objects for comparison (set time to midnight for accurate day comparison)
         const fromDate = fromDateStr ? new Date(fromDateStr) : null;
         if(fromDate) fromDate.setHours(0,0,0,0);
-        
+
         const toDate = toDateStr ? new Date(toDateStr) : null;
         if(toDate) toDate.setHours(23,59,59,999); // Include the whole end day
 
@@ -1792,8 +1841,8 @@ async function loadCities(districtId) {
             // --- 2. Date Filter ---
             let matchesDate = true;
             // Retrieve the raw timestamp from the data-date attribute on the <tr class="lead-row">
-            const dateAttr = row.getAttribute('data-date'); 
-            
+            const dateAttr = row.getAttribute('data-date');
+
             if (dateAttr) {
                 const rowDate = new Date(dateAttr);
                 // Check if date is valid
@@ -1829,9 +1878,9 @@ async function loadCities(districtId) {
             // Mobile (Column 2 - Phone) Note: Your table order is Executive, Name, Phone, Loan AC...
             // Let's verify index based on your HTML structure:
             // 0: Executive, 1: Name, 2: Phone, 3: Loan AC, 4: Company, 5: Amount, 6: Status, 7: Type, 8: Bank, 9: Date
-            
+
             if (!checkColumn(2, mobileFilter)) matchesFilters = false;
-            
+
             if (!checkColumn(3, loanAccountFilter)) matchesFilters = false;
 
             if (!checkColumn(4, companyFilter)) matchesFilters = false;
@@ -1841,13 +1890,13 @@ async function loadCities(districtId) {
                 const amountText = (tds[5].textContent || tds[5].innerText).trim();
                 const amount = parseIndianAmount(amountText);
                 let matchesAmount = false;
-                
+
                 if (loanAmountFilter === '1-1000' && amount >= 1 && amount <= 1000) matchesAmount = true;
                 else if (loanAmountFilter === '1000-10000' && amount >= 1000 && amount <= 10000) matchesAmount = true;
                 else if (loanAmountFilter === '10000-100000' && amount >= 10000 && amount <= 100000) matchesAmount = true;
                 else if (loanAmountFilter === '100000-1000000' && amount >= 100000 && amount <= 1000000) matchesAmount = true;
                 else if (loanAmountFilter === '1000000+' && amount >= 1000000) matchesAmount = true;
-                
+
                 if (!matchesAmount) matchesFilters = false;
             }
 
@@ -1857,7 +1906,7 @@ async function loadCities(districtId) {
             if (leadTypeFilter && tds[7]) {
                 const rowType = (tds[7].textContent || tds[7].innerText).toUpperCase().trim();
                 let searchType = leadTypeFilter;
-                
+
                 // Handle the mapping logic you have in PHP (personal_loan -> PL)
                 if (leadTypeFilter === 'PERSONAL_LOAN') searchType = 'PL';
                 else if (leadTypeFilter === 'BUSINESS_LOAN') searchType = 'BL';
@@ -1878,13 +1927,13 @@ async function loadCities(districtId) {
         // Update UI Counters
         const countSpan = document.getElementById('totalLeadsCount');
         if(countSpan) countSpan.textContent = count;
-        
+
         calculateTotalAmount();
     }
         function applyDateFilter() {
             const fromDate = document.getElementById('fromDate').value;
             const toDate = document.getElementById('toDate').value;
-            
+
             if (fromDate && toDate) {
                 applyFilters();
             } else if (fromDate || toDate) {
@@ -2027,6 +2076,27 @@ async function loadCities(districtId) {
     document.getElementById('loginModal').classList.add('active');
 }
 
+        // Realtime refresh (Pusher) - no backend data removal, only reload on updates.
+        (function initLeadsDetailsRealtime() {
+            const pusherKey = @json(config('broadcasting.connections.pusher.key'));
+            const pusherCluster = @json(config('broadcasting.connections.pusher.options.cluster'));
+            if (!pusherKey || !window.Pusher) return;
+
+            let reloadTimer = null;
+            const softReload = () => {
+                if (document.hidden) return;
+                if (document.querySelector('.modal-overlay.active')) return;
+                if (reloadTimer) clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(() => window.location.reload(), 1200);
+            };
+
+            const pusher = new Pusher(pusherKey, {
+                cluster: pusherCluster || 'mt1',
+                forceTLS: true,
+            });
+            const channel = pusher.subscribe('admin-live-dashboard');
+            channel.bind('dashboard.updated', softReload);
+        })();
     </script>
 </body>
 </html>

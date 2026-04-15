@@ -93,12 +93,15 @@
         .table-modern thead th {
             color: white;
             font-weight: 600;
-            padding: 1.25rem 1.5rem;
-            font-size: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.68rem;
             letter-spacing: 0.1em;
             text-transform: uppercase;
             text-align: left;
             border: none;
+            position: sticky;
+            top: 0;
+            z-index: 5;
         }
 
         .table-modern tbody tr {
@@ -115,9 +118,11 @@
         }
 
         .table-modern tbody td {
-            padding: 1.25rem 1.5rem;
+            padding: 0.65rem 1rem;
             font-weight: 500;
             color: var(--gray-600);
+            font-size: 0.82rem;
+            line-height: 1.2;
         }
 
         .btn-success {
@@ -126,13 +131,13 @@
             color: white;
             font-weight: 600;
             border-radius: 12px;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 0.75rem;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             cursor: pointer;
-            font-size: 0.875rem;
+            font-size: 0.78rem;
         }
 
         .btn-success:hover {
@@ -374,7 +379,8 @@
 
             .table-modern thead th,
             .table-modern tbody td {
-                padding: 0.75rem 1rem;
+                padding: 0.55rem 0.75rem;
+                font-size: 0.74rem;
             }
 
             .btn-success {
@@ -461,11 +467,17 @@
         let allDeletedLeads = [];
 
         document.addEventListener('DOMContentLoaded', function () {
-            loadDeletedLeads();
+            // Use inline table loader on first render; avoid full-page dim overlay on page open.
+            loadDeletedLeads(false);
         });
 
-        function loadDeletedLeads() {
-            showLoading(true);
+        function loadDeletedLeads(showOverlay = false) {
+            if (showOverlay) {
+                showLoading(true);
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             // Use the API endpoint specifically
             fetch('/admin/lead/deleted', {
@@ -474,7 +486,8 @@
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                }
+                },
+                signal: controller.signal
             })
             .then(res => {
                 if (!res.ok) {
@@ -492,10 +505,20 @@
             })
             .catch(error => {
                 console.error('Error loading deleted leads:', error);
+                if (error.name === 'AbortError') {
+                    showNotification('Deleted leads request timed out. Please try again.', 'error');
+                    renderEmptyState('Request timed out while loading deleted leads.');
+                    return;
+                }
                 showNotification(`Failed to load deleted leads: ${error.message}`, 'error');
                 renderEmptyState('Error loading deleted leads. Check console for details.');
             })
-            .finally(() => showLoading(false));
+            .finally(() => {
+                clearTimeout(timeoutId);
+                if (showOverlay) {
+                    showLoading(false);
+                }
+            });
         }
 
         function renderDeletedLeads() {
@@ -619,7 +642,7 @@
             .then(data => {
                 showNotification('Lead restored successfully!', 'success');
                 closeRestoreModal();
-                loadDeletedLeads();
+                loadDeletedLeads(false);
             })
             .catch(error => {
                 console.error('Error restoring lead:', error);

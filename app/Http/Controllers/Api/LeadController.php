@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\LiveDashboardUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Bank;
 use App\Models\FollowUp;
@@ -671,30 +672,37 @@ if (!$score) {
 // ✅ Apply scoring
 // Use office rule config with fallback defaults.
 $officeRule = OfficeRule::query()->latest('id')->first();
+$officeRule = OfficeRule::query()->latest('id')->first();
+
 $personalLeadCount = (int) ($officeRule->personal_lead_count ?? 2);
-$leadMark = (float) ($officeRule->lead_mark ?? 15);
-if ($personalLeadCount < 0) {
+$leadMark = (float) ($officeRule->lead_mark ?? 30);
+
+if ($personalLeadCount <= 0) {
     $personalLeadCount = 2;
 }
-if ($leadMark < 0) {
-    $leadMark = 15;
+if ($leadMark <= 0) {
+    $leadMark = 30;
 }
 
+// ✅ Per lead value
+$perLeadMark = $leadMark / $personalLeadCount;
+
+// ✅ Calculate
 if ($todayLeadCount <= $personalLeadCount) {
-    $score->lead_score += $leadMark;
+    $score->lead_score = $todayLeadCount * $perLeadMark;
+    $score->additional_lead_score = 0;
 } else {
-    $score->additional_lead_score += $leadMark;
+    $score->lead_score = $leadMark; // FIXED max
+    $additionalLeadCount = $todayLeadCount - $personalLeadCount;
+    $score->additional_lead_score = $additionalLeadCount * $perLeadMark;
 }
 
 // ✅ Recalculate total score
 $score->total_score =
     $score->target_score +
     $score->lead_score +
-    $score->attendance_score +
-    $score->leave_score +
-    $score->additional_target_score +
-    $score->additional_lead_score;
-
+    $score->discipline_score;
+    
 $score->save();
                 LeadHistory::create([
                     'lead_id' => $lead->id,
@@ -739,6 +747,7 @@ $score->save();
             }
 
             DB::commit();
+            event(new LiveDashboardUpdated((int) Auth::id()));
 
             return response()->json([
                 'status' => 'success',

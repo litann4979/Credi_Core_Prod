@@ -38,9 +38,9 @@
            /* Layout Container */
        .main-container {
     min-height: 100vh;
-    padding: 3rem 1rem;
+    padding: 1.5rem 1rem 2rem;
     padding-left: 280px;
-    max-width: 1600px;
+    max-width: 1500px;
     margin: 0 auto;
     margin-top: 30px; /* Add this line to push content down below fixed header */
 }
@@ -48,15 +48,17 @@
        @media (max-width: 768px) {
     .main-container { 
         padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: 1rem;
         margin-top: 60px; /* Adjust based on mobile header height */
     }
 }
 
         /* Typography */
         .page-title {
-            font-size: 2rem;
+            font-size: 2.1rem;
             font-weight: 800;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.2rem;
             background: linear-gradient(135deg, var(--gray-900) 0%, var(--primary-600) 50%, var(--purple-500) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -65,8 +67,21 @@
 
         .page-subtitle {
             color: var(--gray-500);
-            font-size: 0.95rem;
-            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        .page-hero {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+            padding: 1rem 1.1rem;
+            border: 1px solid var(--gray-200);
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
         }
 
         /* Modern Stat Cards */
@@ -74,7 +89,7 @@
             background: #ffffff;
             border: 1px solid var(--gray-200);
             border-radius: 20px;
-            padding: 1.5rem;
+            padding: 1rem 1.1rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
             position: relative;
@@ -101,7 +116,7 @@
         }
 
         .stat-number {
-            font-size: 2.25rem;
+            font-size: 1.95rem;
             font-weight: 800;
             color: var(--gray-900);
             line-height: 1;
@@ -123,7 +138,21 @@
             border-radius: 20px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             overflow: hidden;
-            margin-top: 2rem;
+            margin-top: 0.75rem;
+        }
+
+        @media (max-width: 992px) {
+            .page-hero {
+                flex-direction: column;
+                align-items: flex-start;
+                margin-bottom: 0.9rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 1.6rem;
+            }
         }
 
         .table-modern {
@@ -136,8 +165,8 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
             color: white;
             font-weight: 600;
-            padding: 1.25rem 1.5rem;
-            font-size: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.68rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             text-align: left;
@@ -154,11 +183,12 @@
         }
 
         .table-modern td {
-            padding: 1.25rem 1.5rem;
+            padding: 0.65rem 1rem;
             color: var(--gray-700);
             vertical-align: middle;
-            font-size: 0.9rem;
+            font-size: 0.82rem;
             border-bottom: 1px solid var(--gray-100);
+            line-height: 1.2;
         }
 
         /* Modern Buttons */
@@ -221,18 +251,18 @@
 
         /* Profile Images */
         .profile-img-modern {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             object-fit: cover;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             border: 2px solid white;
         }
 
         .profile-placeholder {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             background: var(--gray-100);
             display: flex;
             align-items: center;
@@ -304,7 +334,7 @@
     <div class="main-container">
         @include('admin.Components.header')
 
-        <div class="d-flex justify-content-between align-items-end mb-5 mt-4">
+        <div class="page-hero mt-2">
             <div>
                 <h1 class="page-title">
                     <i class="fas fa-user-tie me-2"></i>Team Lead Management
@@ -318,7 +348,7 @@
             </button>
         </div>
 
-        <div class="row g-4 mb-5">
+        <div class="row g-3 mb-3">
             <div class="col-md-6 col-lg-6">
                 <div class="stat-card-modern">
                     <div class="d-flex justify-content-between align-items-start">
@@ -363,6 +393,20 @@
         @endif
 
         <div class="table-card">
+            <div class="p-4 border-bottom bg-light">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 rounded-start-3 border-gray-200">
+                        <i class="fas fa-search text-primary-500"></i>
+                    </span>
+                    <input
+                        type="text"
+                        id="teamLeadSearchInput"
+                        class="form-control border-start-0"
+                        placeholder="Search by name, email, phone, address, or operation..."
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table-modern">
                     <thead>
@@ -377,7 +421,7 @@
                             <th class="text-end"><i class="fas fa-cogs me-1"></i> Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="teamLeadTableBody">
                         @forelse($teamleads as $teamlead)
                             <tr>
                                 <td>
@@ -634,6 +678,17 @@
                 }
                 reader.readAsDataURL(file);
             }
+        });
+
+        // Dynamic table search
+        document.getElementById('teamLeadSearchInput')?.addEventListener('input', function () {
+            const query = this.value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#teamLeadTableBody tr');
+
+            rows.forEach((row) => {
+                const rowText = row.textContent.toLowerCase();
+                row.style.display = rowText.includes(query) ? '' : 'none';
+            });
         });
     </script>
 </body>
