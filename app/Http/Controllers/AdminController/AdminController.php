@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\AdminController;
 
+use App\Events\LiveDashboardUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Lead;
@@ -2040,6 +2041,10 @@ public function updateAndExportMonths(Request $request)
         }
 
         DB::commit();
+
+        if (count($affectedLeads) > 0) {
+            event(new LiveDashboardUpdated(auth()->id()));
+        }
 
         // 🔒 HARD STOP → no update = no export
         if (count($affectedLeads) === 0) {

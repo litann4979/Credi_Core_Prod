@@ -13,6 +13,9 @@ use App\Models\LeadForwardedHistory;
 use Illuminate\Http\Request;
 use App\Models\Lead;
 use App\Models\Notification;
+use App\Models\OfficeRule;
+use App\Models\Score;
+use App\Models\Target;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -228,11 +231,38 @@ public function updateStatus(Request $request, $id)
 
         $lead->save();
 
-        Log::info('Lead status updated', [
-            'lead_id' => $lead->id,
-            'new_status' => $request->status,
-            'voice_recording_path' => $voiceRecordingPath ?? 'N/A'
-        ]);
+        if ($request->status === 'disbursed') {
+            DB::beginTransaction();
+
+            try {
+                $leadAmount = (float) ($lead->lead_amount ?? 0);
+
+                if ($lead->employee_id) {
+                    $this->applyDisbursedIncrementToUserTargetAndTodayScore(
+                        (int) $lead->employee_id,
+                        $leadAmount,
+                        false
+                    );
+                }
+
+                $teamLeadUserId = $this->resolveTeamLeadUserId($lead);
+                if (
+                    $teamLeadUserId
+                    && (!$lead->employee_id || $teamLeadUserId !== (int) $lead->employee_id)
+                ) {
+                    $this->applyDisbursedIncrementToUserTargetAndTodayScore(
+                        $teamLeadUserId,
+                        $leadAmount,
+                        true
+                    );
+                }
+
+                DB::commit();
+            } catch (\Throwable $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        }
 
         // ✅ Always insert new history
         DB::table('lead_histories')->insert([
@@ -472,7 +502,7 @@ public function storeDocument(Request $request, Lead $lead)
                     'is_active' => true, // Assuming you have this flag
                     // Add default values for other required fields if any
                 ]);
-                
+
                 Log::info("New Bank Created via Lead Edit: " . $request->bank_name);
             }
         }
@@ -496,7 +526,12 @@ public function storeDocument(Request $request, Lead $lead)
             'bank_name' => $request->bank_name,
         ]);
 
-        Log::info('Lead updated', ['lead_id' => $id, 'user_id' => auth()->id()]);
+        if ($lead->status === 'disbursed') {
+            DB::transaction(function () use ($lead) {
+                $lead->refresh();
+                $this->recalculateOpenLeadTargetAndTodayScoreForLeadOwners($lead);
+            });
+        }
 
         return response()->json(['success' => true, 'message' => 'Lead updated successfully']);
     } catch (ValidationException $e) {
@@ -633,17 +668,12 @@ public function creditcardUpdate(Request $request, $id)
             'bank_name' => $request->bank_name,
         ]);
 
-        Log::info('Lead updated', ['lead_id' => $id, 'user_id' => auth()->id(),
-            'phone' => $request->phone,
-            'email' => $request->email,
-            'dob' => $request->dob,
-            'state' => $request->state,
-            'district' => $request->district,
-            'city' => $request->city,
-            'lead_amount' => $request->lead_amount,
-            'lead_type' => $request->lead_type,
-            'salary' => $request->salary,
-            'bank_name' => $request->bank_name,]);
+        if ($lead->status === 'disbursed') {
+            DB::transaction(function () use ($lead) {
+                $lead->refresh();
+                $this->recalculateOpenLeadTargetAndTodayScoreForLeadOwners($lead);
+            });
+        }
 
         return response()->json(['success' => true, 'message' => 'Lead updated successfully']);
     } catch (ValidationException $e) {
@@ -654,6 +684,176 @@ public function creditcardUpdate(Request $request, $id)
         return response()->json(['error' => 'Internal server error', 'message' => $e->getMessage()], 500);
     }
 }
+
+
+  /**
+     * Team lead for scoring: lead.team_lead_id, else employee.users.team_lead_id.
+     */
+    private function resolveTeamLeadUserId(Lead $lead): ?int
+    {
+        if ($lead->team_lead_id) {
+            return (int) $lead->team_lead_id;
+        }
+        if (!$lead->employee_id) {
+            return null;
+        }
+        $emp = User::query()->find($lead->employee_id);
+
+        return $emp && $emp->team_lead_id ? (int) $emp->team_lead_id : null;
+    }
+
+    /**
+     * On disburse: increment open lead-target achieved_value and refresh today's target_score (employee vs team-lead aggregate).
+     *
+     * @param  bool  $aggregateByTeamLeadOnLead  If true, today's sum uses leads.team_lead_id; else leads.employee_id.
+     */
+    private function applyDisbursedIncrementToUserTargetAndTodayScore(
+        int $userId,
+        float $leadAmount,
+        bool $aggregateByTeamLeadOnLead
+    ): void {
+        if ($userId <= 0) {
+            return;
+        }
+
+        $target = Target::where('user_id', $userId)
+            ->where('is_completed', 0)
+            ->where('type', 'lead')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$target) {
+            return;
+        }
+
+        if ($leadAmount > 0) {
+            $target->achieved_value += (int) round($leadAmount);
+
+            if ($target->achieved_value >= $target->target_value) {
+                $target->is_completed = 1;
+            }
+
+            $target->save();
+        }
+
+        $this->refreshTodayTargetScoreForUser($userId, $target, $aggregateByTeamLeadOnLead);
+    }
+
+    /**
+     * After lead fields change while disbursed: realign achieved_value from all disbursed leads and refresh today's score.
+     */
+    private function recalculateOpenLeadTargetAndTodayScoreForLeadOwners(Lead $lead): void
+    {
+        if ($lead->status !== 'disbursed') {
+            return;
+        }
+
+        if ($lead->employee_id) {
+            $this->recalculateOpenLeadTargetAndTodayScoreForUser(
+                (int) $lead->employee_id,
+                false
+            );
+        }
+
+        $teamLeadUserId = $this->resolveTeamLeadUserId($lead);
+        if (
+            $teamLeadUserId
+            && (!$lead->employee_id || $teamLeadUserId !== (int) $lead->employee_id)
+        ) {
+            $this->recalculateOpenLeadTargetAndTodayScoreForUser($teamLeadUserId, true);
+        }
+    }
+
+    private function recalculateOpenLeadTargetAndTodayScoreForUser(
+        int $userId,
+        bool $aggregateByTeamLeadOnLead
+    ): void {
+        if ($userId <= 0) {
+            return;
+        }
+
+        $target = Target::where('user_id', $userId)
+            ->where('is_completed', 0)
+            ->where('type', 'lead')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$target) {
+            return;
+        }
+
+        $scopeQuery = Lead::query()->where('status', 'disbursed');
+        if ($aggregateByTeamLeadOnLead) {
+            $scopeQuery->where('team_lead_id', $userId);
+        } else {
+            $scopeQuery->where('employee_id', $userId);
+        }
+
+        $target->achieved_value = (int) round((float) (clone $scopeQuery)->sum('lead_amount'));
+        $target->is_completed = $target->achieved_value >= $target->target_value ? 1 : 0;
+        $target->save();
+
+        $this->refreshTodayTargetScoreForUser($userId, $target, $aggregateByTeamLeadOnLead);
+    }
+
+    private function refreshTodayTargetScoreForUser(
+        int $userId,
+        Target $target,
+        bool $aggregateByTeamLeadOnLead
+    ): void {
+        $totalAchieved = (float) Lead::query()
+            ->where('status', 'disbursed')
+            ->whereDate('updated_at', today())
+            ->when(
+                $aggregateByTeamLeadOnLead,
+                fn ($q) => $q->where('team_lead_id', $userId),
+                fn ($q) => $q->where('employee_id', $userId)
+            )
+            ->sum('lead_amount');
+
+        $dailyTarget = (float) ($target->target_value / 25);
+        $officeRule = OfficeRule::query()->latest('id')->first();
+        $targetMark = (float) ($officeRule->target_mark ?? 20);
+        if ($targetMark <= 0) {
+            $targetMark = 20;
+        }
+
+        $targetScoreRaw = $dailyTarget > 0
+            ? ($totalAchieved / $dailyTarget) * $targetMark
+            : 0.0;
+
+        $targetScore = min($targetMark, $targetScoreRaw);
+        $additionalTargetScore = max(0, $targetScoreRaw - $targetMark);
+
+        $score = Score::where('user_id', $userId)
+            ->whereDate('date', today())
+            ->lockForUpdate()
+            ->first();
+
+        if (!$score) {
+            $score = new Score();
+            $score->user_id = $userId;
+            $score->date = today();
+            $score->target_score = 0;
+            $score->additional_target_score = 0;
+            $score->lead_score = 0;
+            $score->discipline_score = 0;
+            $score->attendance_score = 0;
+            $score->leave_score = 0;
+            $score->additional_lead_score = 0;
+            $score->total_score = 0;
+        }
+
+        $score->target_score = $targetScore;
+        $score->additional_target_score = $additionalTargetScore;
+        $score->total_score =
+            (float) ($score->target_score ?? 0) +
+            (float) ($score->lead_score ?? 0) +
+            (float) ($score->discipline_score ?? 0) +
+            (float) ($score->leave_score ?? 0);
+
+        $score->save();
+    }
 
 }
 

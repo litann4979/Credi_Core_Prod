@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
           crossorigin="">
-    @include('admin.target.partials.styles')
+    @include('admin.Target.partials.styles')
 </head>
 <body>
 
@@ -44,7 +44,7 @@
                 <form action="{{ route('admin.geofence.update', $geofence) }}" method="POST">
                     @csrf
                     @method('PUT')
-                    @include('admin.geofence.partials.form', ['geofence' => $geofence])
+                    @include('admin.Geofence.partials.form', ['geofence' => $geofence])
                     <div class="d-flex gap-2 justify-content-end mt-4 pt-3 border-top">
                         <a href="{{ route('admin.geofence.index') }}" class="btn btn-light text-muted fw-medium px-4">Cancel</a>
                         <button type="submit" class="btn-modern">Update geofence</button>

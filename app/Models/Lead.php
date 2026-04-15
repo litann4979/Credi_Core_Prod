@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\LiveDashboardUpdated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,6 +11,17 @@ use Illuminate\Support\Facades\Storage;
 class Lead extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::saved(function (Lead $lead): void {
+            event(new LiveDashboardUpdated((int) $lead->employee_id));
+        });
+
+        static::deleted(function (Lead $lead): void {
+            event(new LiveDashboardUpdated((int) $lead->employee_id));
+        });
+    }
 
     protected $fillable = [
         'employee_id',

@@ -14,12 +14,12 @@ class GeofenceController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('admin.geofence.index', compact('geofences'));
+        return view('admin.Geofence.index', compact('geofences'));
     }
 
     public function create()
     {
-        return view('admin.geofence.create');
+        return view('admin.Geofence.create');
     }
 
     public function store(Request $request)
@@ -35,7 +35,7 @@ class GeofenceController extends Controller
 
     public function edit(GeofenceSettings $geofence)
     {
-        return view('admin.geofence.edit', compact('geofence'));
+        return view('admin.Geofence.edit', compact('geofence'));
     }
 
     public function update(Request $request, GeofenceSettings $geofence)

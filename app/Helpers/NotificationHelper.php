@@ -19,6 +19,7 @@ class NotificationHelper
     const TYPE_TASK = 'task';
     const TYPE_OFFER = 'offer';
     const TYPE_SALARY_SLIP = 'salary_slip';
+    const TYPE_TARGET = 'target';
     const TYPE_GENERAL = 'general';
 
     private static function getMessaging()
@@ -108,6 +109,21 @@ class NotificationHelper
     }
 
     /**
+     * Send notification for Target
+     */
+    public static function sendTargetNotification($userId, $targetId, $title, $message, $attachment = null)
+    {
+        return self::createAndSendNotification([
+            'user_id' => $userId,
+            'target_id' => $targetId,
+            'title' => $title,
+            'message' => $message,
+            'attachment' => $attachment,
+            'type' => self::TYPE_TARGET,
+        ]);
+    }
+
+    /**
      * Send general notification (no specific entity)
      */
     public static function sendGeneralNotification($userId, $title, $message, $attachment = null)
@@ -135,6 +151,7 @@ class NotificationHelper
                 'task_id' => $data['task_id'] ?? null,
                 'offer_id' => $data['offer_id'] ?? null,
                 'salary_slip_id' => $data['salary_slip_id'] ?? null,
+                'target_id' => $data['target_id'] ?? null,
                 'message' => $data['message'],
                 'attachment' => $data['attachment'] ?? null,
                 'is_read' => 0,
@@ -199,6 +216,9 @@ class NotificationHelper
             }
             if (isset($extraData['salary_slip_id'])) {
                 $fcmData['salary_slip_id'] = (string) $extraData['salary_slip_id'];
+            }
+            if (isset($extraData['target_id'])) {
+                $fcmData['target_id'] = (string) $extraData['target_id'];
             }
             if (isset($extraData['attachment'])) {
                 $fcmData['attachment'] = (string) $extraData['attachment'];

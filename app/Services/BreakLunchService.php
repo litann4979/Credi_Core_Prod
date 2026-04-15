@@ -9,8 +9,18 @@ use Illuminate\Support\Collection;
 
 class BreakLunchService
 {
+    private const LUNCH_GRACE_MINUTES = 15;
+    private const BREAK_GRACE_MINUTES = 15;
+
     /**
      * Calculate break/lunch outside minutes and penalties for an employee/date.
+     *
+     * Windows are extended by grace minutes:
+     * - Lunch: lunch_start -> lunch_end + 15 minutes
+     * - Break: break_start -> break_end + 15 minutes
+     *
+     * Outside movement beyond grace windows is intentionally NOT penalized here,
+     * so geofence/unauthorized services can handle it without double-counting.
      *
      * @return array{
      *   break: array{outside_minutes: float, penalty: float},
@@ -41,11 +51,13 @@ class BreakLunchService
         $now = Carbon::now();
         $breakWindow = [
             'start' => $this->windowAt($day, (string) $rule->break_start),
-            'end' => $this->windowAt($day, (string) $rule->break_end),
+            'end' => $this->windowAt($day, (string) $rule->break_end)
+                ->addMinutes(self::BREAK_GRACE_MINUTES),
         ];
         $lunchWindow = [
             'start' => $this->windowAt($day, (string) $rule->lunch_start),
-            'end' => $this->windowAt($day, (string) $rule->lunch_end),
+            'end' => $this->windowAt($day, (string) $rule->lunch_end)
+                ->addMinutes(self::LUNCH_GRACE_MINUTES),
         ];
 
         $breakOutside = $this->outsideMinutesWithinWindow($logs, $breakWindow['start'], $breakWindow['end'], $now);
@@ -56,8 +68,7 @@ class BreakLunchService
             allowedMinutes: (int) ($rule->break_allowed_minutes ?? 0),
             fixedPenalty: (float) ($rule->extra_break_penalty ?? 0),
             perMinuteEnabled: (bool) ($rule->per_minute_deduction_enabled ?? false),
-            penaltyPerMinute: (float) ($rule->penalty_per_minute ?? 0),
-            currentlyPastWindowEndOutside: $this->isOutsideAfterWindowEnd($logs, $breakWindow['end'], $now)
+            penaltyPerMinute: (float) ($rule->penalty_per_minute ?? 0)
         );
 
         $lunchPenalty = $this->computeWindowPenalty(
@@ -65,8 +76,7 @@ class BreakLunchService
             allowedMinutes: (int) ($rule->lunch_allowed_minutes ?? 0),
             fixedPenalty: (float) ($rule->extra_lunch_penalty ?? 0),
             perMinuteEnabled: (bool) ($rule->per_minute_deduction_enabled ?? false),
-            penaltyPerMinute: (float) ($rule->penalty_per_minute ?? 0),
-            currentlyPastWindowEndOutside: $this->isOutsideAfterWindowEnd($logs, $lunchWindow['end'], $now)
+            penaltyPerMinute: (float) ($rule->penalty_per_minute ?? 0)
         );
 
         return [
@@ -134,8 +144,7 @@ class BreakLunchService
         int $allowedMinutes,
         float $fixedPenalty,
         bool $perMinuteEnabled,
-        float $penaltyPerMinute,
-        bool $currentlyPastWindowEndOutside
+        float $penaltyPerMinute
     ): float {
         $extraMinutes = max(0, $outsideMinutes - max(0, $allowedMinutes));
         $penalty = 0.0;
@@ -146,21 +155,6 @@ class BreakLunchService
                 : max(0, $fixedPenalty);
         }
 
-        if ($currentlyPastWindowEndOutside) {
-            $penalty += max(0, $fixedPenalty);
-        }
-
         return $penalty;
     }
-
-    private function isOutsideAfterWindowEnd(Collection $logs, Carbon $windowEnd, Carbon $now): bool
-    {
-        if ($now->lessThanOrEqualTo($windowEnd) || $logs->isEmpty()) {
-            return false;
-        }
-
-        $last = $logs->last();
-        return (bool) ($last->is_outside ?? false);
-    }
-
 }

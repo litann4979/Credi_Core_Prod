@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\OfferController;
 use App\Http\Controllers\Api\SalarySlipController;
 use App\Http\Controllers\Api\TeamController;
+use App\Http\Controllers\Api\TargetController;
 
 
 Route::post('/register', [AuthenticationController::class, 'register']);
@@ -82,6 +83,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //Team view api
     Route::get('/teams', [TeamController::class, 'index']);
+
+    // Target API (authenticated user's assigned targets)
+    Route::get('/targets', [TargetController::class, 'index']);
+    Route::get('/targets/{target}', [TargetController::class, 'show']);
 
     Route::get('/offers', [OfferController::class, 'index'])->name('api.offers.index');
 

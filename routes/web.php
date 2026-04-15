@@ -1,11 +1,12 @@
 <?php
 
 use App\Http\Controllers\AdminController\BankController;
-use App\Http\Controllers\Admin\OfficeRuleController;
+use App\Http\Controllers\AdminController\OfficeRuleController;
 use App\Http\Controllers\AdminController\TargetController;
 use App\Http\Controllers\AdminController\GeofenceController;
 use App\Http\Controllers\AdminController\EmployeeMovementController;
 use App\Http\Controllers\AdminController\AdminAttendanceController;
+use App\Http\Controllers\AdminController\AdminAccessChoiceController;
 use App\Http\Controllers\AdminController\AdminController;
 use App\Http\Controllers\AdminController\AdminEmployeeController;
 use App\Http\Controllers\AdminController\AdminHRController;
@@ -83,7 +84,7 @@ Route::middleware(['auth', 'verified'])->get('/dashboard', function () {
         case 'operations':
             return redirect()->route('operations.dashboard');
         case 'admin':
-            return redirect()->route('admin.dashboard');
+            return redirect()->route('admin.access-choice');
         case 'hr':
             return redirect()->route('hr.leave.index');
         default:
@@ -324,6 +325,9 @@ Route::post('/salary-slips/{id}/download', [OperationDashboardController::class,
 // Admin routes (accessible only by users with designation 'admin')
 Route::middleware(['auth', 'designation:admin'])->prefix('admin')->name('admin.')->group(function () {
 
+Route::get('/access-choice', [AdminAccessChoiceController::class, 'index'])->name('access-choice');
+Route::post('/access-choice/live-tv', [AdminAccessChoiceController::class, 'openTvMode'])->name('access-choice.live-tv');
+
  // Dashboard
    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
    Route::post('/dashboard/leads', [AdminController::class, 'filterLeads'])->name('dashboard.leads');
@@ -336,7 +340,8 @@ Route::post('/dashboard/charts', [AdminController::class, 'filterCharts'])->name
 Route::post('/dashboard/tasks', [AdminController::class, 'filterTasks'])->name('dashboard.tasks');
 Route::post('/dashboard/attendance', [AdminController::class, 'filterAttendance'])->name('dashboard.attendance');
 Route::get('/live-dashboard', [AdminLiveDashboardController::class, 'index'])->name('live-dashboard');
-Route::get('/live-dashboard/userindex', [AdminLiveDashboardController::class, 'userindex'])->name('live-dashboard.userindex');
+Route::get('/live-dashboard/teamlead-index', [AdminLiveDashboardController::class, 'teamLeadIndex'])->name('live-dashboard.teamlead-index');
+Route::get('/live-dashboard/data', [AdminLiveDashboardController::class, 'dashboardData'])->name('live-dashboard.data');
 
 // New route for lead analytics page
 Route::get('/lead-analytics', [AdminController::class, 'leadAnalytics'])->name('lead-analytics');
@@ -478,6 +483,14 @@ Route::post('/leave/approvals/{leave}', [AdminLeaveApprovalController::class, 'u
 
 
 });
+
+Route::middleware(['throttle:120,1'])
+    ->prefix('live-dashboard/user')
+    ->name('live-dashboard.user.')
+    ->group(function () {
+        Route::get('/', [AdminLiveDashboardController::class, 'userTvIndex'])->name('index');
+        Route::get('/data', [AdminLiveDashboardController::class, 'userTvDashboardData'])->name('data');
+    });
 
 Route::middleware(['auth', 'designation:hr'])->prefix('hr')->name('hr.')->group(function () {
     Route::get('/leave', [HrLeaveController::class, 'create'])->name('leave.index');

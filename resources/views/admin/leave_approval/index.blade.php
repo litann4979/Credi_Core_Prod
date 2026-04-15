@@ -69,9 +69,9 @@
         .table-modern th {
             background: linear-gradient(135deg, var(--primary-50) 0%, var(--primary-100) 100%);
             text-align: left;
-            padding: 20px 24px;
+            padding: 10px 14px;
             font-weight: 600;
-            font-size: 0.75rem;
+            font-size: 0.68rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             color: var(--primary-700);
@@ -87,13 +87,14 @@
         }
 
         .table-modern td {
-            padding: 20px 24px;
+            padding: 9px 14px;
             border-bottom: 1px solid var(--gray-100);
             color: var(--gray-600);
             vertical-align: middle;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
             font-weight: 400;
             transition: all 0.2s ease;
+            line-height: 1.2;
         }
 
         .table-modern tr:last-child td {
@@ -115,9 +116,9 @@
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            padding: 0.25rem 0.55rem;
             border-radius: 50px;
-            font-size: 0.75rem;
+            font-size: 0.66rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -183,8 +184,8 @@
             background: linear-gradient(135deg, var(--success-500) 0%, var(--success-600) 100%);
             color: #ffffff;
             font-weight: 600;
-            font-size: 0.75rem;
-            padding: 0.75rem 1.5rem;
+            font-size: 0.68rem;
+            padding: 0.45rem 0.8rem;
             border: none;
             border-radius: 8px;
             cursor: pointer;
@@ -226,8 +227,8 @@
             background: linear-gradient(135deg, #ffffff 0%, var(--gray-50) 100%);
             color: var(--gray-600);
             font-weight: 600;
-            font-size: 0.75rem;
-            padding: 0.75rem 1.5rem;
+            font-size: 0.68rem;
+            padding: 0.45rem 0.8rem;
             border: 2px solid var(--gray-200);
             border-radius: 8px;
             cursor: pointer;
@@ -337,10 +338,10 @@
 
         /* Enhanced typography and layout */
         .page-title {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: 800;
             color: var(--gray-900);
-            margin-bottom: 2.5rem;
+            margin-bottom: 1rem;
             letter-spacing: -0.025em;
             background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
             -webkit-background-clip: text;
@@ -380,14 +381,18 @@
         .card-header {
             border-bottom: 1px solid var(--gray-100);
             background: linear-gradient(135deg, #ffffff 0%, var(--gray-50) 100%);
-            padding: 2rem;
+            padding: 1rem 1.25rem;
         }
 
         .main-content {
-            margin-left: 250px;
-            padding: 2.5rem;
+            margin-left: 280px;
+            padding: 1.2rem 1.4rem 1.6rem;
             margin-top: 36px;
             min-height: calc(100vh - 36px);
+        }
+
+        .page-head {
+            margin-bottom: 0.7rem;
         }
 
         .overflow-x-auto {
@@ -402,8 +407,9 @@
 
         .action-buttons {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.4rem;
             align-items: center;
+            flex-wrap: nowrap;
         }
 
         .empty-state {
@@ -457,11 +463,12 @@
         @media (max-width: 768px) {
             .main-content {
                 margin-left: 0;
-                padding: 1rem;
+                padding: 0.85rem;
             }
 
             .page-title {
-                font-size: 2rem;
+                font-size: 1.6rem;
+                margin-bottom: 0.7rem;
             }
 
             .table-modern {
@@ -480,11 +487,13 @@
     <div class="main-content p-6">
         @include('admin.Components.header')
         <div class="w-full max-w-7xl mx-auto">
-            <h1 class="page-title">Leave Approval Requests</h1>
+            <div class="page-head">
+                <h1 class="page-title">Leave Approval Requests</h1>
+            </div>
 
             <!-- Leave Requests Table -->
-            <div class="dashboard-card p-8">
-                <div class="card-header p-6 -m-8 mb-6">
+            <div class="dashboard-card p-4">
+                <div class="card-header p-0 -m-4 mb-4">
                     <h2 class="section-title mb-0">
                         <i class="fas fa-file-alt"></i>
                          Leave Requests

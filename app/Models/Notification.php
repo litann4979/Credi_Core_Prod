@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Target;
 
 class Notification extends Model
 {
@@ -16,6 +17,7 @@ class Notification extends Model
         'task_id',
         'offer_id',
         'salary_slip_id', // Added for salary slip notifications
+        'target_id',
         'attachment',
         'message',
         'is_read',
@@ -46,5 +48,10 @@ class Notification extends Model
 {
     return $this->belongsTo(Offer::class);
 }
+
+    public function target()
+    {
+        return $this->belongsTo(Target::class, 'target_id');
+    }
 
 }

@@ -36,6 +36,7 @@ class AttendanceController extends Controller
                 'total_score' => 0,
                 'target_score' => 0,
                 'lead_score' => 0,
+                'discipline_score' => 0,
                 'attendance_score' => 0,
                 'leave_score' => 0,
                 'additional_target_score' => 0,
@@ -51,16 +52,8 @@ class AttendanceController extends Controller
         );
     }
 
-    private function recalculateTotalScore(Score $score): void
+    private function recalculateDisciplineScore(Score $score): void
     {
-        $earned =
-            (float) $score->target_score +
-            (float) $score->lead_score +
-            (float) $score->attendance_score +
-            (float) $score->leave_score +
-            (float) $score->additional_target_score +
-            (float) $score->additional_lead_score;
-
         $penalties =
             (float) $score->late_penalty +
             (float) $score->late_15min_penalty +
@@ -70,7 +63,16 @@ class AttendanceController extends Controller
             (float) $score->geofence_penalty +
             (float) $score->work_penalty;
 
-        $score->total_score = $earned - $penalties;
+        $discipline = (float) $score->attendance_score - $penalties;
+        $score->discipline_score = $discipline > 0 ? $discipline : 0;
+    }
+
+    private function recalculateTotalScore(Score $score): void
+    {
+        $score->total_score =
+            (float) $score->target_score +
+            (float) $score->lead_score +
+            (float) $score->discipline_score;
     }
 
     private function calculateDistanceMeters(
@@ -325,20 +327,28 @@ class AttendanceController extends Controller
             ->whereDate('date', $today)
             ->first();
 
-        if ($attendance && $attendance->check_in && !$attendance->check_out) {
+        if ($attendance && $attendance->check_out) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You have already completed check-in and check-out for today.',
+                'button_action' => 'none',
+                'attendance_id' => $attendance->id,
+            ], 403);
+        }
 
+        if ($attendance && $attendance->check_in && ! $attendance->check_out) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'You are already checked in. Please check out before checking in again.',
                 'button_action' => 'checkout',
-                'attendance_id' => $attendance->id
+                'attendance_id' => $attendance->id,
             ], 403);
         }
 
         DB::beginTransaction();
         try {
-            if (!$attendance) {
-                // First check-in of the day
+            if (! $attendance) {
+                // Single check-in of the day (no re-check-in after checkout)
                 $officeRule = $this->getOfficeRule();
                 $officeStart = Carbon::parse($today->toDateString() . ' ' . $officeRule->office_start_time);
                 $lateMinutes = $now->greaterThan($officeStart) ? $officeStart->diffInMinutes($now) : 0;
@@ -362,6 +372,8 @@ class AttendanceController extends Controller
 
                 // Idempotent penalty assignment for the day.
                 $score = $this->getOrCreateDailyScore((int) $user->id, $today);
+                // Daily discipline pool (points penalties subtract from) — was never set before, so discipline_score stayed 0.
+                $score->attendance_score = (float) ($officeRule->default_score ?? 0);
                 if ($lateMinutes > 0) {
                     if ($lateMinutes < 15) {
                         $score->late_penalty = (float) ($officeRule->late_penalty ?? 0);
@@ -374,37 +386,16 @@ class AttendanceController extends Controller
                     $score->late_penalty = 0;
                     $score->late_15min_penalty = 0;
                 }
+                $this->recalculateDisciplineScore($score);
                 $this->recalculateTotalScore($score);
                 $score->save();
             } else {
-                // Re-check-in (e.g., after lunch break)
-                $sessions = is_string($attendance->sessions) ? json_decode($attendance->sessions, true) : $attendance->sessions;
-                if (!is_array($sessions)) {
-                    $sessions = [];
-                }
-                $sessions[] = $sessionData;
-                $encodedSessions = json_encode($sessions);
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    DB::rollBack();
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Failed to process re-check-in due to data encoding error.',
-                        'button_action' => 'checkin'
-                    ], 500);
-                }
-                $attributes = [
-                    'check_in' => $now,
-                    'check_out' => null, // Reset check_out for re-check-in
-                    'check_in_location' => $request->check_in_location,
-                    'check_in_coordinates' => $request->check_in_coordinates,
-                    'checkin_image' => $request->hasFile('checkin_image')
-                        ? '/storage/' . $request->file('checkin_image')->store('attendance/checkin', 'public')
-                        : $attendance->checkin_image,
-                    'notes' => $request->notes ?? $attendance->notes,
-                    'reason' => 'Re-check-in',
-                    'sessions' => $encodedSessions
-                ];
-                $attendance->update($attributes);
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Unable to record check-in for today.',
+                    'button_action' => 'checkin',
+                ], 422);
             }
 
             DB::commit();
@@ -449,6 +440,14 @@ class AttendanceController extends Controller
             ], 422);
         }
 
+        if ($attendance->check_out) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You have already checked out for today.',
+                'button_action' => 'completed',
+            ], 403);
+        }
+
         // Update the latest session for check-out
         $sessions = is_string($attendance->sessions) ? json_decode($attendance->sessions, true) : $attendance->sessions;
         $sessions = is_array($sessions) ? $sessions : [];
@@ -458,7 +457,7 @@ class AttendanceController extends Controller
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Already checked out for the current session.',
-                    'button_action' => 'checkin'
+                    'button_action' => 'completed',
                 ], 403);
             }
             $latestSession['check_out'] = now()->toDateTimeString();
@@ -511,9 +510,14 @@ class AttendanceController extends Controller
             $attendance->update($attributes);
 
             $score = $this->getOrCreateDailyScore((int) $attendance->employee_id, $attendanceDate);
+            // If the score row was created earlier (e.g. leads) with attendance_score = 0, apply the daily pool now.
+            if ((float) $score->attendance_score <= 0) {
+                $score->attendance_score = (float) ($officeRule->default_score ?? 0);
+            }
             $score->early_checkout_penalty = $earlyCheckoutMinutes > 0
                 ? (float) ($officeRule->early_checkout_penalty ?? 0)
                 : 0;
+            $this->recalculateDisciplineScore($score);
             $this->recalculateTotalScore($score);
             $score->save();
 
@@ -546,7 +550,7 @@ public function checkTodayStatus()
     $user = Auth::user();
     $today = Carbon::today()->toDateString();
 
- 
+
 
     // Check for approved leave
     $leaveToday = Leave::where('user_id', $user->id)
@@ -579,12 +583,11 @@ public function checkTodayStatus()
         ->whereDate('date', $today)
         ->first();
 
-    if (!$attendance) {
-
+    if (! $attendance) {
         return response()->json([
             'status' => 'pending',
             'message' => 'You have not checked in yet today.',
-            'button_action' => 'checkin'
+            'button_action' => 'checkin',
         ]);
     }
 
@@ -592,22 +595,18 @@ public function checkTodayStatus()
     $sessions = is_array($sessions) ? $sessions : [];
     $totalWorkedHours = 0;
 
-    // Calculate total worked hours
-    if (!empty($sessions)) {
+    if (! empty($sessions)) {
         foreach ($sessions as $session) {
-            if (!empty($session['check_in']) && !empty($session['check_out'])) {
+            if (! empty($session['check_in']) && ! empty($session['check_out'])) {
                 $totalWorkedHours += Carbon::parse($session['check_in'])->diffInMinutes($session['check_out']) / 60;
             }
         }
     }
 
-    // Get latest session
-    $latestSession = !empty($sessions) ? end($sessions) : null;
+    $latestSession = ! empty($sessions) ? end($sessions) : null;
 
-    // Load employee relationship to match update method's response
     $attendance->load('employee');
 
-    // Format attendance data to include all relevant fields
     $formattedAttendance = [
         'id' => $attendance->id,
         'employee_id' => $attendance->employee_id,
@@ -626,11 +625,25 @@ public function checkTodayStatus()
         'employee' => $attendance->employee ? [
             'id' => $attendance->employee->id,
             'name' => $attendance->employee->name,
-            // Add other employee fields as needed
         ] : null,
     ];
 
-    if ($attendance->check_in && !$attendance->check_out) {
+    // One check-in + one check-out per day: day is finished — no further actions.
+    if ($attendance->check_in && $attendance->check_out) {
+        return response()->json([
+            'status' => 'completed',
+            'message' => 'You have completed attendance for today.',
+            'button_action' => 'completed',
+            'check_in_time' => $attendance->check_in,
+            'check_out_time' => $attendance->check_out,
+            'worked_hours' => round($totalWorkedHours, 2),
+            'attendance_id' => $attendance->id,
+            'session' => $latestSession,
+            'data' => $formattedAttendance,
+        ]);
+    }
+
+    if ($attendance->check_in && ! $attendance->check_out) {
         return response()->json([
             'status' => 'checkin_done',
             'message' => 'You have checked in but not checked out yet.',
@@ -639,24 +652,9 @@ public function checkTodayStatus()
             'worked_hours' => round($totalWorkedHours, 2),
             'attendance_id' => $attendance->id,
             'session' => $latestSession,
-            'data' => $formattedAttendance // Include full attendance data
+            'data' => $formattedAttendance,
         ]);
     }
-
-    if ($latestSession && !empty($latestSession['check_in']) && !empty($latestSession['check_out'])) {
-        return response()->json([
-            'status' => 'completed',
-            'message' => 'You have checked out. Re-check-in if you return to work.',
-            'button_action' => 'checkin',
-            'check_in_time' => $attendance->check_in,
-            'check_out_time' => $latestSession['check_out'],
-            'worked_hours' => round($totalWorkedHours, 2),
-            'attendance_id' => $attendance->id,
-            'session' => $latestSession,
-            'data' => $formattedAttendance // Include full attendance data
-        ]);
-    }
-
 
     return response()->json([
         'status' => 'pending',
@@ -664,7 +662,7 @@ public function checkTodayStatus()
         'button_action' => 'checkin',
         'attendance_id' => $attendance->id,
         'session' => $latestSession,
-        'data' => $formattedAttendance // Include full attendance data
+        'data' => $formattedAttendance,
     ]);
 }
 }

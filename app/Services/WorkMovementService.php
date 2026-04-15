@@ -80,6 +80,7 @@ class WorkMovementService
                         'total_score' => 0,
                         'target_score' => 0,
                         'lead_score' => 0,
+                        'discipline_score' => 0,
                         'attendance_score' => 0,
                         'leave_score' => 0,
                         'additional_target_score' => 0,
@@ -94,7 +95,17 @@ class WorkMovementService
                     ]
                 );
 
-                $score->work_penalty = (float) $score->work_penalty + $penaltyAmount;
+                Score::applyDefaultAttendancePoolIfNeeded($score);
+
+                // Apply work penalty only once per user/day.
+                if ((float) $score->work_penalty > 0) {
+                    $lockedMovement->penalty_applied = true;
+                    $lockedMovement->save();
+                    return;
+                }
+
+                $score->work_penalty = $penaltyAmount;
+                $score->discipline_score = $this->calculateDisciplineScore($score);
                 $score->total_score = $this->calculateTotalScore($score);
                 $score->save();
 
@@ -104,16 +115,8 @@ class WorkMovementService
         }
     }
 
-    private function calculateTotalScore(Score $score): float
+    private function calculateDisciplineScore(Score $score): float
     {
-        $earned =
-            (float) $score->target_score +
-            (float) $score->lead_score +
-            (float) $score->attendance_score +
-            (float) $score->leave_score +
-            (float) $score->additional_target_score +
-            (float) $score->additional_lead_score;
-
         $penalties =
             (float) $score->late_penalty +
             (float) $score->late_15min_penalty +
@@ -123,7 +126,17 @@ class WorkMovementService
             (float) $score->geofence_penalty +
             (float) $score->work_penalty;
 
-        return $earned - $penalties;
+        $discipline = (float) $score->attendance_score - $penalties;
+
+        return $discipline > 0 ? $discipline : 0;
+    }
+
+    private function calculateTotalScore(Score $score): float
+    {
+        return
+            (float) $score->target_score +
+            (float) $score->lead_score +
+            (float) $score->discipline_score;
     }
 }
 

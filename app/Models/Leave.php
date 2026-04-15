@@ -1,12 +1,20 @@
 <?php
 namespace App\Models;
 
+use App\Events\LiveDashboardUpdated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Leave extends Model
 {
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::saved(function (Leave $leave): void {
+            event(new LiveDashboardUpdated((int) $leave->user_id));
+        });
+    }
 
     protected $fillable = [
         'user_id',
